@@ -1090,14 +1090,14 @@ end
 # #18218
 eval(Base.LinAlg, quote
     function arithtype(T)
-        depwarn(string("arithtype is now deprecated. If you were using it inside a ",
+        Base.depwarn(string("arithtype is now deprecated. If you were using it inside a ",
             "promote_op call, use promote_op(LinAlg.matprod, Ts...) instead. Otherwise, ",
             "if you need its functionality, consider defining it locally."),
             :arithtype)
         T
     end
     function arithtype(::Type{Bool})
-        depwarn(string("arithtype is now deprecated. If you were using it inside a ",
+        Base.depwarn(string("arithtype is now deprecated. If you were using it inside a ",
             "promote_op call, use promote_op(LinAlg.matprod, Ts...) instead. Otherwise, ",
             "if you need its functionality, consider defining it locally."),
             :arithtype)
