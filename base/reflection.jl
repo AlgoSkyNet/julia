@@ -273,6 +273,16 @@ Determine the declared type of a field (specified by name or index) in a composi
 """
 fieldtype
 
+"""
+    fieldindex(T, name::Symbol, err:Bool=true)
+
+Get the index of a named field, throwing an error if the field does not exist (when err==true)
+or returning 0 (when err==false).
+"""
+function fieldindex(T::DataType, name::Symbol, err::Bool=true)
+    return Int(ccall(:jl_field_index, Cint, (Any, Any, Cint), T, name, err)+1)
+end
+
 type_alignment(x::DataType) = (@_pure_meta; ccall(:jl_get_alignment, Csize_t, (Any,), x))
 
 # return all instances, for types that can be enumerated
