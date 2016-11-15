@@ -635,22 +635,18 @@ function apply_type_tfunc(args...)
             try
                 return Type{Union{map(t->t.parameters[1],args)...}}
             catch
-                return Any
             end
-        else
-            return Any
         end
-    elseif isa(headtype, Union)
         return Any
     end
-    istuple = (headtype === Tuple)
+    istuple = (headtype == Tuple)
     uncertain = false
     tparams = Any[]
     for i=2:largs
         ai = args[i]
         if isType(ai)
             aip1 = ai.parameters[1]
-            uncertain |= has_typevars(aip1)
+            uncertain |= has_free_typevars(aip1)
             push!(tparams, aip1)
         elseif isa(ai, Const) && valid_tparam(ai.val)
             push!(tparams, ai.val)
@@ -669,7 +665,6 @@ function apply_type_tfunc(args...)
         end
     end
     local appl
-    # good, all arguments understood
     try
         appl = apply_type(headtype, tparams...)
     catch
@@ -680,9 +675,9 @@ function apply_type_tfunc(args...)
     end
     !uncertain && return Type{appl}
     if type_too_complex(appl,0)
-        return Type{TypeVar(:_,headtype)}
+        return Type{_} where _<:headtype
     end
-    !(isa(appl,TypeVar) || isvarargtype(appl)) ? Type{TypeVar(:_,appl)} : Type{appl}
+    !(isa(appl,TypeVar) || isvarargtype(appl)) ? (Type{_} where _<:appl) : Type{appl}
 end
 add_tfunc(apply_type, 1, IInf, apply_type_tfunc)
 
@@ -742,7 +737,7 @@ function builtin_tfunction(f::ANY, argtypes::Array{Any,1}, sv::InferenceState)
         end
         a1 = argtypes[1]
         if isvarargtype(a1)
-            return a1.parameters[1]
+            return unwrap_unionall(a1).parameters[1]
         end
         return a1
     elseif f === arrayref
@@ -800,14 +795,13 @@ function limit_tuple_depth_(params::InferenceParams, t::ANY, d::Int)
         # also limit within Union types.
         # may have to recur into other stuff in the future too.
         return Union{map(x->limit_tuple_depth_(params,x,d+1), (t.a,t.b))...}
-    end
-    if isa(t,TypeVar)
-        return limit_tuple_depth_(params, t.ub, d)
-    end
-    if !(isa(t,DataType) && t.name === Tuple.name)
+    elseif isa(t,UnionAll)
+        var = TypeVar(t.var.name, t.var.lb, limit_tuple_depth_(params, t.var.ub, d))
+        body = limit_tuple_depth_(params, t{var}, d)
+        return UnionAll(var, body)
+    elseif !(isa(t,DataType) && t.name === Tuple.name)
         return t
-    end
-    if d > params.MAX_TUPLE_DEPTH
+    elseif d > params.MAX_TUPLE_DEPTH
         return Tuple
     end
     p = map(x->limit_tuple_depth_(params,x,d+1), t.parameters)
