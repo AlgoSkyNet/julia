@@ -189,7 +189,7 @@ jl_code_info_t *jl_type_infer(jl_method_instance_t *li, int force)
     if (jl_typeinf_func == NULL)
         return NULL;
     jl_code_info_t *src = NULL;
-#if 0 //def ENABLE_INFERENCE
+#ifdef ENABLE_INFERENCE
     jl_module_t *mod = NULL;
     if (li->def != NULL)
         mod = li->def->module;
